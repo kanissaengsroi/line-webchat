@@ -84,7 +84,6 @@ const th = {
   messageTo: "ส่งข้อความถึง {name}…",
   customerEmptyTitle: "ส่งข้อความถึง {name}",
   customerEmptyLead: "เจ้าหน้าที่จะตอบกลับในหน้านี้",
-  customerLineNote: "คำตอบจะส่งถึงแอป LINE ของคุณด้วย เมื่อเพิ่ม OA เป็นเพื่อนแล้ว",
   guestNote: "แชทนี้อยู่บนเว็บเท่านั้น เข้าสู่ระบบด้วย LINE หากต้องการรับคำตอบในแอป LINE",
   addFriend: "เพิ่มเพื่อน",
   chatWith: "{name}",
@@ -101,6 +100,13 @@ const th = {
   deleteBodyWeb: "ประวัติข้อความทั้งหมดจะถูกลบและกู้คืนไม่ได้ ผู้ใช้เว็บจะเห็นแชทว่างเปล่า",
   deleteFailed: "ลบไม่สำเร็จ ลองอีกครั้ง",
   cancel: "ยกเลิก",
+  liffNote: "ข้อความจะถูกส่งในแชท LINE ที่เปิดหน้านี้ เหมือนพิมพ์ในแอป LINE",
+  openInLine: "เปิดในแอป LINE",
+  liffLoading: "กำลังเชื่อมต่อกับ LINE…",
+  liffFailed: "เปิดผ่าน LINE ไม่สำเร็จ",
+  liffRetry: "ลองอีกครั้ง",
+  liffUseWeb: "ใช้เว็บแชทแทน",
+  customerLineNote: "คำตอบจะส่งถึงแอป LINE ของคุณด้วย เปิดหน้านี้ในแอป LINE เพื่อให้ข้อความของคุณขึ้นในแชท LINE ด้วย",
 };
 
 type Dict = typeof th;
@@ -186,7 +192,6 @@ const en: Dict = {
   messageTo: "Message {name}…",
   customerEmptyTitle: "Send {name} a message",
   customerEmptyLead: "Staff will reply right here.",
-  customerLineNote: "Replies also reach your LINE app once you've added the OA as a friend.",
   guestNote: "This chat lives on the website only. Log in with LINE to get replies in the LINE app.",
   addFriend: "Add friend",
   chatWith: "{name}",
@@ -203,6 +208,13 @@ const en: Dict = {
   deleteBodyWeb: "All message history is deleted and can't be recovered. The web user will see an empty chat.",
   deleteFailed: "Couldn't delete. Try again.",
   cancel: "Cancel",
+  liffNote: "Messages are sent in the LINE chat that opened this page, just like typing in LINE.",
+  openInLine: "Open in LINE app",
+  liffLoading: "Connecting to LINE…",
+  liffFailed: "Couldn't open through LINE",
+  liffRetry: "Try again",
+  liffUseWeb: "Use the web chat instead",
+  customerLineNote: "Replies also reach your LINE app. Open this page in the LINE app to make your messages show in your LINE chat too.",
 };
 
 const dicts: Record<Lang, Dict> = { th, en };

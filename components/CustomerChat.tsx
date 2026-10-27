@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, UserPlus } from "lucide-react";
+import { LogOut, MessageCircle, UserPlus } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { Composer } from "./Composer";
 import { ConnectionBadge } from "./Inbox";
@@ -12,18 +12,21 @@ import { useNow } from "@/hooks/useNow";
 import { channelOf } from "@/lib/types";
 
 const OA_URL = process.env.NEXT_PUBLIC_LINE_OA_URL;
+const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
 interface Props {
   convId: string;
   username: string;
   picture?: string;
   oa: { name: string; pictureUrl?: string; id: string };
+  /** Inside LINE (LIFF): posts as the user into the LINE chat. Resolves false if it could not. */
+  sendViaLine?: (text: string) => Promise<boolean>;
 }
 
-export function CustomerChat({ convId, username, picture, oa }: Props) {
+export function CustomerChat({ convId, username, picture, oa, sendViaLine }: Props) {
   const { t } = useLang();
   const now = useNow();
-  const chat = useCustomerChat(convId);
+  const chat = useCustomerChat(convId, sendViaLine);
   const viaLine = channelOf(convId) === "line";
 
   async function logout() {
@@ -77,8 +80,17 @@ export function CustomerChat({ convId, username, picture, oa }: Props) {
         />
 
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pb-2 text-[13px] text-ink-3 sm:px-5">
-          <span>{viaLine ? t("customerLineNote") : t("guestNote")}</span>
-          {viaLine && OA_URL && (
+          <span>{sendViaLine ? t("liffNote") : viaLine ? t("customerLineNote") : t("guestNote")}</span>
+          {viaLine && !sendViaLine && LIFF_ID && (
+            <a
+              href={`https://liff.line.me/${LIFF_ID}`}
+              className="inline-flex items-center gap-1.5 font-medium text-go hover:text-go-hover"
+            >
+              <MessageCircle className="size-4" aria-hidden />
+              {t("openInLine")}
+            </a>
+          )}
+          {viaLine && !sendViaLine && OA_URL && (
             <a
               href={OA_URL}
               target="_blank"

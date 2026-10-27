@@ -14,9 +14,18 @@ function newId() {
 
 const upsert = upsertMessage;
 
-/** The signed-in customer's own thread with the OA, kept live. */
-export function useCustomerChat(convId: string) {
+// How long to wait for LINE's webhook copy of a message sent with liff.sendMessages.
+const ECHO_TIMEOUT_MS = 15000;
+
+/**
+ * The signed-in customer's own thread with the OA, kept live.
+ * With `sendViaLine` (inside LINE, LIFF), messages are posted as the user into their LINE chat;
+ * LINE then delivers them to our webhook, and that copy replaces the local placeholder.
+ */
+export function useCustomerChat(convId: string, sendViaLine?: (text: string) => Promise<boolean>) {
   const [messages, setMessages] = useState<UIMessage[] | undefined>(undefined);
+  /** Local placeholder id → text, for messages sent through LINE and not yet echoed back. */
+  const awaitingEcho = useRef(new Map<string, string>());
   const [connection, setConnection] = useState<Connection>(PUSHER_KEY ? "connecting" : "polling");
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -66,7 +75,20 @@ export function useCustomerChat(convId: string) {
       const channel = pusher.subscribe(`private-user-${convId}`);
       channel.bind("message:new", (event: MessageEvent) => {
         if (event.truncated) return void load();
-        setMessages((current) => upsert(current ?? [], event.message));
+        // LINE's copy of a message we sent through LINE: swap it in for the placeholder.
+        let placeholder: string | undefined;
+        if (event.message.dir === "in" && !event.message.via) {
+          for (const [id, text] of awaitingEcho.current) {
+            if (text === event.message.text) {
+              placeholder = id;
+              awaitingEcho.current.delete(id);
+              break;
+            }
+          }
+        }
+        setMessages((current) =>
+          upsert((current ?? []).filter((m) => m.id !== placeholder), event.message),
+        );
       });
       // Staff deleted this conversation: start over with an empty chat.
       channel.bind("conv:delete", () => setMessages([]));
@@ -97,8 +119,25 @@ export function useCustomerChat(convId: string) {
   }, []);
 
   const send = useCallback(
-    (text: string) => deliver({ id: newId(), dir: "in", type: "text", text, at: Date.now(), via: "web" }),
-    [deliver],
+    async (text: string) => {
+      const message: UIMessage = { id: newId(), dir: "in", type: "text", text, at: Date.now() };
+      if (sendViaLine) {
+        setMessages((current) => upsert(current ?? [], { ...message, status: "sending" }));
+        if (await sendViaLine(text)) {
+          awaitingEcho.current.set(message.id, text);
+          // No echo (e.g. realtime down): drop the placeholder and reload from the server.
+          setTimeout(() => {
+            if (!awaitingEcho.current.delete(message.id)) return;
+            setMessages((current) => (current ?? []).filter((m) => m.id !== message.id));
+            load();
+          }, ECHO_TIMEOUT_MS);
+          return;
+        }
+        // Not inside a LINE chat after all: send it to staff from the website instead.
+      }
+      deliver({ ...message, via: "web" });
+    },
+    [sendViaLine, deliver, load],
   );
 
   const retry = useCallback(

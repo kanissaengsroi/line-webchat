@@ -57,12 +57,17 @@ export async function exchangeCode(
   if (!tokenRes.ok) throw new Error(`token exchange failed (${tokenRes.status})`);
   const { id_token } = (await tokenRes.json()) as { id_token?: string };
   if (!id_token) throw new Error("no id_token (is the openid scope enabled?)");
+  return verifyIdToken(id_token, cfg.channelId, nonce);
+}
 
-  // LINE checks signature, audience, expiry and nonce for us.
+/** Verifies a LINE ID token with LINE (signature, audience, expiry, and nonce when given). */
+export async function verifyIdToken(idToken: string, channelId: string, nonce?: string): Promise<LineIdentity> {
+  const body = new URLSearchParams({ id_token: idToken, client_id: channelId });
+  if (nonce) body.set("nonce", nonce);
   const verifyRes = await fetch("https://api.line.me/oauth2/v2.1/verify", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ id_token, client_id: cfg.channelId, nonce }),
+    body,
   });
   if (!verifyRes.ok) throw new Error(`id_token verification failed (${verifyRes.status})`);
   const claims = (await verifyRes.json()) as { sub?: string; name?: string; picture?: string };

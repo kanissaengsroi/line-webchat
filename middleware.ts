@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, readSessionToken, type Role } from "@/lib/session";
 
-const PUBLIC_API = ["/api/auth/", "/api/line/webhook"];
+// /liff signs the customer in itself (LIFF ID token), so it must load without a session.
+const PUBLIC_API = ["/api/auth/", "/api/line/webhook", "/liff"];
 const SHARED = ["/api/pusher/auth"];
 // Customers (LINE Login) only reach their own chat; everything else belongs to agents.
 const CUSTOMER_ONLY = ["/chat", "/api/me"];
