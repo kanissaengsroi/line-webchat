@@ -44,3 +44,7 @@ next-env.d.ts
 .vercel
 /.agents/
 /skills-lock.json
+
+# design / AI tool notes (kept locally)
+/.impeccable/
+/PRODUCT.md
