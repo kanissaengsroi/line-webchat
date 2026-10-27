@@ -112,7 +112,7 @@ export function Thread({ conversation: c, messages, now, composerRef, onBack, on
           </div>
         )}
         {messages?.length === 0 && <p className="py-10 text-center text-ink-3">{t("noMessages")}</p>}
-        <ol className="mx-auto flex max-w-3xl flex-col">
+        <ol className="flex flex-col">
           {messages?.map((m, i) => {
             const prev = messages[i - 1];
             const next = messages[i + 1];
@@ -180,7 +180,7 @@ function MessageRow({
   return (
     <li className={`rise flex flex-col ${out ? "items-end" : "items-start"} ${endsGroup ? "mb-3" : "mb-1"}`}>
       <div
-        className={`max-w-[min(36rem,85%)] rounded-2xl px-3.5 py-2 text-[15px] leading-6 whitespace-pre-wrap [overflow-wrap:anywhere] ${
+        className={`max-w-[min(42rem,75%)] rounded-2xl px-3.5 py-2 text-[15px] leading-6 whitespace-pre-wrap [overflow-wrap:anywhere] ${
           out ? "rounded-br-md bg-rule-strong text-ink" : "rounded-bl-md bg-raised text-ink"
         } ${m.status === "sending" ? "opacity-60" : ""} ${m.status === "failed" ? "ring-1 ring-red/60" : ""}`}
       >
