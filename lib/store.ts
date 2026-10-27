@@ -36,6 +36,7 @@ function emptyConversation(userId: string): Conversation {
 /** Applies a new message to a conversation summary. */
 function applyMessage(conv: Conversation, msg: ChatMessage): Conversation {
   const next = { ...conv, lastText: msg.text, lastType: msg.type, lastDir: msg.dir, lastAt: msg.at };
+  if (msg.via === "web") next.web = true;
   if (msg.type === "follow") next.blocked = false;
   if (msg.type === "unfollow") next.blocked = true;
   if (msg.type === "follow" || msg.type === "unfollow") return next;
@@ -69,6 +70,7 @@ function fromHash(userId: string, raw: Record<string, unknown> | null): Conversa
     waitingSince: Number(raw.waitingSince ?? 0),
     unread: Number(raw.unread ?? 0),
     blocked: raw.blocked === true || raw.blocked === "true",
+    web: raw.web === true || raw.web === "true",
   };
 }
 
@@ -83,6 +85,7 @@ function toHash(conv: Conversation): Record<string, string | number> {
     waitingSince: conv.waitingSince,
     unread: conv.unread,
     blocked: conv.blocked ? "true" : "false",
+    web: conv.web ? "true" : "false",
   };
 }
 

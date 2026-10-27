@@ -36,6 +36,28 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return { displayName: data.displayName, pictureUrl: data.pictureUrl };
 }
 
+export interface BotInfo {
+  displayName: string;
+  pictureUrl?: string;
+  basicId?: string;
+}
+
+/** The OA's own name and picture, for the customer chat header. Cached for an hour. */
+export async function getBotInfo(): Promise<BotInfo | null> {
+  const token = env.lineAccessToken;
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API}/info`, {
+      headers: { Authorization: `Bearer ${token}` },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as BotInfo;
+  } catch {
+    return null;
+  }
+}
+
 /** Sends a text message from the OA to one LINE user. */
 export async function pushText(to: string, text: string, retryKey: string): Promise<void> {
   const token = env.lineAccessToken;

@@ -1,12 +1,12 @@
 "use client";
 
 import { forwardRef, useEffect, useRef } from "react";
-import { Search } from "lucide-react";
+import { Globe, Search } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { useLang } from "./LangProvider";
 import { formatListTime, formatWait, waitLevel } from "@/lib/format";
 import { typeLabel } from "@/lib/i18n";
-import type { Conversation } from "@/lib/types";
+import { channelOf, type Conversation } from "@/lib/types";
 
 const WAIT_TEXT = { calm: "text-ink-2", warn: "text-amber", late: "text-red" } as const;
 const WAIT_PILL = {
@@ -86,8 +86,19 @@ export const ConversationList = forwardRef<HTMLInputElement, Props>(function Con
               >
                 <Avatar userId={c.userId} name={c.displayName} src={c.pictureUrl} />
                 <span className="min-w-0 overflow-hidden">
-                  <span className={`block truncate font-medium ${selected ? "text-ink" : "text-ink-1"}`}>
-                    {c.displayName}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className={`truncate font-medium ${selected ? "text-ink" : "text-ink-1"}`}>
+                      {c.displayName}
+                    </span>
+                    {(channelOf(c.userId) === "web" || c.web) && (
+                      <span
+                        className="flex shrink-0 items-center gap-1 rounded border border-rule-strong px-1 font-mono text-[10px] leading-4 text-ink-2"
+                        title={channelOf(c.userId) === "web" ? t("webGuest") : t("alsoOnWeb")}
+                      >
+                        <Globe className="size-2.5" aria-hidden />
+                        WEB
+                      </span>
+                    )}
                   </span>
                   <span
                     key={c.lastAt}

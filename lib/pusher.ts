@@ -6,6 +6,9 @@ export const INBOX_CHANNEL = "private-inbox";
 export const MESSAGE_EVENT = "message:new";
 export const READ_EVENT = "conv:read";
 
+/** Private channel a customer on the website listens to for their own thread. */
+export const customerChannel = (lineUserId: string) => `private-user-${lineUserId}`;
+
 // Pusher rejects payloads over 10 KB; Thai text is 3 bytes per character.
 const MAX_PUSH_TEXT = 1500;
 
@@ -29,7 +32,8 @@ export async function publishMessage(event: MessageEvent): Promise<void> {
     truncated,
   };
   try {
-    await pusher.trigger(INBOX_CHANNEL, MESSAGE_EVENT, payload);
+    // Agents see everything; the customer sees only their own thread.
+    await pusher.trigger([INBOX_CHANNEL, customerChannel(conversation.userId)], MESSAGE_EVENT, payload);
   } catch (err) {
     // Realtime is best effort; clients resync on reconnect.
     console.error("[pusher] trigger failed", err);

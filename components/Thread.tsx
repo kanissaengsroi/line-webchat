@@ -1,37 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useLayoutEffect, useRef } from "react";
-import {
-  ArrowLeft,
-  CircleHelp,
-  File,
-  Image as ImageIcon,
-  LoaderCircle,
-  MapPin,
-  Mic,
-  Sticker,
-  UserPlus,
-  UserX,
-  Video,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowLeft, Globe } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { Composer } from "./Composer";
 import { useLang } from "./LangProvider";
-import { dayKey, formatClock, formatDay, formatWait, shortId, waitLevel } from "@/lib/format";
-import { typeLabel } from "@/lib/i18n";
-import type { Conversation, MessageType } from "@/lib/types";
+import { MessageList } from "./MessageList";
+import { formatWait, shortId, waitLevel } from "@/lib/format";
+import { channelOf, type Conversation } from "@/lib/types";
 import type { UIMessage } from "@/hooks/useInbox";
-
-const TYPE_ICON: Partial<Record<MessageType, LucideIcon>> = {
-  sticker: Sticker,
-  image: ImageIcon,
-  video: Video,
-  audio: Mic,
-  file: File,
-  location: MapPin,
-  unknown: CircleHelp,
-};
 
 const WAIT_CHIP = {
   calm: "border-rule-strong text-ink-1",
@@ -51,22 +27,10 @@ interface Props {
 }
 
 export function Thread({ conversation: c, messages, now, composerRef, onBack, onSend, onRetry, onDiscard }: Props) {
-  const { t, lang } = useLang();
-  const scroller = useRef<HTMLDivElement>(null);
-  const stickToBottom = useRef(true);
+  const { t } = useLang();
   const wait = c.waitingSince ? now - c.waitingSince : 0;
   const level = waitLevel(wait);
-
-  // Open each conversation at its latest message.
-  useLayoutEffect(() => {
-    stickToBottom.current = true;
-  }, [c.userId]);
-
-  // Follow new messages only when the agent is already at the bottom.
-  useEffect(() => {
-    const el = scroller.current;
-    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
-  }, [messages, c.userId]);
+  const web = channelOf(c.userId) === "web";
 
   return (
     <section aria-label={c.displayName} className="flex h-full min-h-0 flex-col">
@@ -83,8 +47,18 @@ export function Thread({ conversation: c, messages, now, composerRef, onBack, on
         <Avatar userId={c.userId} name={c.displayName} src={c.pictureUrl} size={40} />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-lg leading-tight font-semibold tracking-[-0.01em] text-ink">{c.displayName}</h2>
-          <p className="mt-0.5 font-mono text-xs text-ink-3" title={c.userId}>
-            LINE · {shortId(c.userId)}
+          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-xs text-ink-3" title={c.userId}>
+            {web ? (
+              <>
+                <Globe className="size-3" aria-hidden />
+                {t("webGuest")}
+              </>
+            ) : (
+              <>
+                LINE · {shortId(c.userId)}
+                {c.web && ` · ${t("alsoOnWeb")}`}
+              </>
+            )}
           </p>
         </div>
         <span
@@ -96,45 +70,17 @@ export function Thread({ conversation: c, messages, now, composerRef, onBack, on
         </span>
       </header>
 
-      <div
-        ref={scroller}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
-        className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5"
-        aria-live="polite"
-        aria-relevant="additions"
-      >
-        {!messages && (
-          <div className="flex h-full items-center justify-center text-ink-3">
-            <LoaderCircle className="size-5 animate-spin" aria-hidden />
-          </div>
-        )}
-        {messages?.length === 0 && <p className="py-10 text-center text-ink-3">{t("noMessages")}</p>}
-        <ol className="flex flex-col">
-          {messages?.map((m, i) => {
-            const prev = messages[i - 1];
-            const next = messages[i + 1];
-            const newDay = !prev || dayKey(prev.at) !== dayKey(m.at);
-            const endsGroup = !next || next.dir !== m.dir || next.at - m.at > 5 * 60000 || next.type === "follow" || next.type === "unfollow";
-            return (
-              <Fragment key={m.id}>
-                {newDay && (
-                  <li className="my-4 flex items-center gap-3 text-xs text-ink-3" aria-hidden>
-                    <span className="h-px flex-1 bg-rule" />
-                    {formatDay(m.at, now, lang, t("today"), t("yesterday"))}
-                    <span className="h-px flex-1 bg-rule" />
-                  </li>
-                )}
-                <MessageRow message={m} endsGroup={endsGroup} onRetry={onRetry} onDiscard={onDiscard} />
-              </Fragment>
-            );
-          })}
-        </ol>
-      </div>
+      <MessageList
+        resetKey={c.userId}
+        messages={messages}
+        now={now}
+        perspective="agent"
+        empty={<p className="py-10 text-center text-ink-3">{t("noMessages")}</p>}
+        onRetry={onRetry}
+        onDiscard={onDiscard}
+      />
 
-      {c.blocked && (
+      {c.blocked && !c.web && (
         <p role="status" className="border-t border-red/40 bg-red-dim px-5 py-2.5 text-[13px] text-red">
           {t("blocked")}
         </p>
@@ -144,79 +90,10 @@ export function Thread({ conversation: c, messages, now, composerRef, onBack, on
         key={c.userId}
         ref={composerRef}
         recipient={c.displayName}
-        disabled={c.blocked}
+        disabled={c.blocked && !c.web}
         onSend={onSend}
         onEscape={onBack}
       />
     </section>
-  );
-}
-
-function MessageRow({
-  message: m,
-  endsGroup,
-  onRetry,
-  onDiscard,
-}: {
-  message: UIMessage;
-  endsGroup: boolean;
-  onRetry: (id: string) => void;
-  onDiscard: (id: string) => void;
-}) {
-  const { t, lang } = useLang();
-
-  if (m.type === "follow" || m.type === "unfollow") {
-    const Icon = m.type === "follow" ? UserPlus : UserX;
-    return (
-      <li className="my-3 flex items-center justify-center gap-2 text-xs text-ink-3">
-        <Icon className="size-3.5" aria-hidden />
-        {typeLabel(lang, m.type)} · <span className="font-mono">{formatClock(m.at, lang)}</span>
-      </li>
-    );
-  }
-
-  const out = m.dir === "out";
-  const Icon = TYPE_ICON[m.type];
-  return (
-    <li className={`rise flex flex-col ${out ? "items-end" : "items-start"} ${endsGroup ? "mb-3" : "mb-1"}`}>
-      <div
-        className={`max-w-[min(42rem,75%)] rounded-2xl px-3.5 py-2 text-[15px] leading-6 whitespace-pre-wrap [overflow-wrap:anywhere] ${
-          out ? "rounded-br-md bg-rule-strong text-ink" : "rounded-bl-md bg-raised text-ink"
-        } ${m.status === "sending" ? "opacity-60" : ""} ${m.status === "failed" ? "ring-1 ring-red/60" : ""}`}
-      >
-        {Icon ? (
-          <span className="flex items-center gap-2 text-ink-2">
-            <Icon className="size-4 shrink-0" aria-hidden />
-            <span>
-              {typeLabel(lang, m.type)}
-              {m.text && <span className="text-ink-1"> · {m.text}</span>}
-            </span>
-          </span>
-        ) : (
-          m.text
-        )}
-      </div>
-      {m.status === "failed" ? (
-        <div className="mt-1 flex items-center gap-3 text-xs" role="alert">
-          <span className="text-red">
-            {m.error ? t("err_line_push_failed", { detail: m.error }) : t("err_generic")}
-          </span>
-          <button type="button" onClick={() => onRetry(m.id)} className="font-medium text-ink underline underline-offset-2 hover:text-go">
-            {t("retry")}
-          </button>
-          <button type="button" onClick={() => onDiscard(m.id)} className="text-ink-3 hover:text-ink-1">
-            {t("discard")}
-          </button>
-        </div>
-      ) : (
-        (endsGroup || m.status === "sending") && (
-          <div className="mt-1 px-1 font-mono text-[11px] text-ink-3">
-            {out && m.agent ? `${m.agent} · ` : ""}
-            {formatClock(m.at, lang)}
-            {m.status === "sending" && ` · ${t("sending")}`}
-          </div>
-        )
-      )}
-    </li>
   );
 }

@@ -167,7 +167,7 @@ export function Inbox({ username }: { username: string }) {
   );
 }
 
-function ConnectionBadge({ connection }: { connection: Connection }) {
+export function ConnectionBadge({ connection }: { connection: Connection }) {
   const { t } = useLang();
   const label =
     connection === "live" ? t("live") : connection === "polling" ? t("polling") : t("reconnecting");

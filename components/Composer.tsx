@@ -7,16 +7,19 @@ import { MAX_TEXT } from "@/lib/types";
 
 interface Props {
   recipient: string;
+  /** Placeholder wording: agents reply to a person, customers message the OA. */
+  mode?: "reply" | "message";
   disabled?: boolean;
   onSend: (text: string) => void;
   onEscape: () => void;
 }
 
 export const Composer = forwardRef<HTMLTextAreaElement | null, Props>(function Composer(
-  { recipient, disabled, onSend, onEscape },
+  { recipient, mode = "reply", disabled, onSend, onEscape },
   ref,
 ) {
   const { t } = useLang();
+  const placeholder = t(mode === "reply" ? "replyTo" : "messageTo", { name: recipient });
   const [text, setText] = useState("");
   const area = useRef<HTMLTextAreaElement>(null);
   useImperativeHandle(ref, () => area.current as HTMLTextAreaElement);
@@ -49,7 +52,7 @@ export const Composer = forwardRef<HTMLTextAreaElement | null, Props>(function C
     >
       <div className="flex items-end gap-2 rounded-xl border border-rule-strong bg-ground p-1.5 pl-3 focus-within:border-ink-3">
         <label htmlFor="composer" className="sr-only">
-          {t("replyTo", { name: recipient })}
+          {placeholder}
         </label>
         <textarea
           id="composer"
@@ -66,7 +69,7 @@ export const Composer = forwardRef<HTMLTextAreaElement | null, Props>(function C
               onEscape();
             }
           }}
-          placeholder={t("replyTo", { name: recipient })}
+          placeholder={placeholder}
           className="max-h-[200px] min-h-9 flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-6 text-ink placeholder:text-ink-3 focus:outline-none focus-visible:outline-none disabled:cursor-not-allowed"
         />
         <button
