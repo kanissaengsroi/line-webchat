@@ -5,7 +5,7 @@ import { LogOut, MessageSquareText, RefreshCw } from "lucide-react";
 import { BrandMark } from "./BrandMark";
 import { ConfirmDelete } from "./ConfirmDelete";
 import { ConversationMenu, type ConversationAction } from "./ConversationMenu";
-import { ConversationList } from "./ConversationList";
+import { ConversationList, type Scope } from "./ConversationList";
 import { LangToggle } from "./LangToggle";
 import { useLang } from "./LangProvider";
 import { Thread } from "./Thread";
@@ -20,10 +20,11 @@ function isTyping(target: EventTarget | null) {
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 }
 
-export function Inbox({ username }: { username: string }) {
+export function Inbox({ username, staff }: { username: string; staff: string[] }) {
   const { t } = useLang();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<Scope>("all");
   const inbox = useInbox(selectedId);
   const now = useNow();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -36,7 +37,9 @@ export function Inbox({ username }: { username: string }) {
   function runAction(userId: string, action: ConversationAction) {
     const c = inbox.byId[userId];
     if (!c) return;
-    if (action === "pin") inbox.setFlags(userId, { pinned: !c.pinned });
+    if (action === "assign-me") inbox.setFlags(userId, { assignee: username });
+    else if (action === "unassign") inbox.setFlags(userId, { assignee: null });
+    else if (action === "pin") inbox.setFlags(userId, { pinned: !c.pinned });
     else if (action === "mute") inbox.setFlags(userId, { muted: !c.muted });
     else setConfirmDelete(userId);
   }
@@ -46,13 +49,23 @@ export function Inbox({ username }: { username: string }) {
     if (selectedId && inbox.listLoaded && !inbox.byId[selectedId]) setSelectedId(null);
   }, [selectedId, inbox.byId, inbox.listLoaded]);
 
+  const counts = useMemo(
+    () => ({
+      all: inbox.conversations.length,
+      mine: inbox.conversations.filter((c) => c.assignee === username).length,
+      unassigned: inbox.conversations.filter((c) => !c.assignee).length,
+    }),
+    [inbox.conversations, username],
+  );
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return inbox.conversations;
     return inbox.conversations.filter(
-      (c) => c.displayName.toLowerCase().includes(q) || c.lastText.toLowerCase().includes(q),
+      (c) =>
+        (scope === "all" || (scope === "mine" ? c.assignee === username : !c.assignee)) &&
+        (!q || c.displayName.toLowerCase().includes(q) || c.lastText.toLowerCase().includes(q)),
     );
-  }, [inbox.conversations, query]);
+  }, [inbox.conversations, query, scope, username]);
 
   const selected = selectedId ? inbox.byId[selectedId] : undefined;
 
@@ -148,6 +161,10 @@ export function Inbox({ username }: { username: string }) {
             <ConversationList
               ref={searchRef}
               conversations={visible}
+              scope={scope}
+              onScope={setScope}
+              counts={counts}
+              me={username}
               selectedId={selectedId}
               query={query}
               onQuery={setQuery}
@@ -170,6 +187,9 @@ export function Inbox({ username }: { username: string }) {
               onRetry={(id) => inbox.retry(selected.userId, id)}
               onDiscard={(id) => inbox.discard(selected.userId, id)}
               onMenu={(position) => setMenu({ userId: selected.userId, position })}
+              me={username}
+              staff={staff}
+              onAssign={(assignee) => inbox.setFlags(selected.userId, { assignee })}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-6 text-center">
@@ -184,6 +204,7 @@ export function Inbox({ username }: { username: string }) {
       {menu && menuConv && (
         <ConversationMenu
           conversation={menuConv}
+          me={username}
           position={menu.position}
           onAction={(action) => runAction(menuConv.userId, action)}
           onClose={() => setMenu(null)}

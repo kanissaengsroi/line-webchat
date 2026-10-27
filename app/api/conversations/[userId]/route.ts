@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession, unauthorized } from "@/lib/auth";
 import { publishConversation, publishDelete } from "@/lib/pusher";
+import { isStaffUsername } from "@/lib/staff";
 import { getStore } from "@/lib/store";
 import { CONV_ID, type ConversationFlags } from "@/lib/types";
 
@@ -14,7 +15,10 @@ async function agentAndId(params: Params["params"]) {
   return { userId };
 }
 
-/** Pin / unpin, mute / unmute. Body: { pinned?: boolean, muted?: boolean } */
+/**
+ * Pin / mute / assign. Body: { pinned?: boolean, muted?: boolean, assignee?: string | null }
+ * (null unassigns; a name must be on the staff list).
+ */
 export async function PATCH(req: Request, { params }: Params) {
   const { error, userId } = await agentAndId(params);
   if (error) return error;
@@ -23,6 +27,11 @@ export async function PATCH(req: Request, { params }: Params) {
   const flags: ConversationFlags = {};
   if (typeof body?.pinned === "boolean") flags.pinned = body.pinned;
   if (typeof body?.muted === "boolean") flags.muted = body.muted;
+  if (body?.assignee === null) flags.assignee = null;
+  else if (typeof body?.assignee === "string") {
+    if (!isStaffUsername(body.assignee)) return NextResponse.json({ error: "not_staff" }, { status: 400 });
+    flags.assignee = body.assignee;
+  }
   if (Object.keys(flags).length === 0) return NextResponse.json({ error: "nothing_to_update" }, { status: 400 });
 
   const conversation = await getStore().setFlags(userId!, flags);

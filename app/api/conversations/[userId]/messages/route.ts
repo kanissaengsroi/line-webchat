@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession, unauthorized } from "@/lib/auth";
 import { LineApiError, pushText, retryKeyFor } from "@/lib/line";
 import { publishMessage } from "@/lib/pusher";
+import { showAgentName } from "@/lib/staff";
 import { getStore } from "@/lib/store";
 import { CONV_ID, MAX_TEXT, channelOf, type ChatMessage } from "@/lib/types";
 
@@ -48,8 +49,10 @@ export async function POST(req: Request, { params }: Params) {
   // Website guests only get replies on the website. LINE users get them in the LINE app,
   // and on the website too if they chat there.
   if (channelOf(userId) === "line") {
+    // In LINE every reply comes from the OA; optionally say which agent wrote it.
+    const lineText = showAgentName() ? `${session.username}: ${text}`.slice(0, MAX_TEXT) : text;
     try {
-      await pushText(userId, text, retryKeyFor(id));
+      await pushText(userId, lineText, retryKeyFor(id));
     } catch (err) {
       const status = err instanceof LineApiError ? err.status : 0;
       console.error("[send] LINE push failed", status, err);
@@ -63,6 +66,10 @@ export async function POST(req: Request, { params }: Params) {
       message.webOnly = true;
     }
   }
+
+  // Answering an unassigned chat takes it.
+  if (!existing.assignee) await store.setFlags(userId, { assignee: session.username });
+
   const conversation = await store.appendMessage(userId, message);
   await publishMessage({ conversation, message });
   return NextResponse.json({ conversation, message });

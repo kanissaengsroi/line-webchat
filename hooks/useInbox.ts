@@ -283,12 +283,19 @@ export function useInbox(selectedId: string | null) {
 
   const discard = useCallback((userId: string, id: string) => dispatch({ type: "discard", userId, id }), []);
 
-  /** Pin / mute, applied at once and rolled back if the server refuses. */
+  /** Pin / mute / assign, applied at once and rolled back if the server refuses. */
   const setFlags = useCallback(
     async (userId: string, flags: ConversationFlags) => {
       const before = state.conversations[userId];
       if (!before) return;
-      dispatch({ type: "update", conversation: { ...before, ...flags } });
+      dispatch({
+        type: "update",
+        conversation: {
+          ...before,
+          ...flags,
+          assignee: flags.assignee === undefined ? before.assignee : (flags.assignee ?? undefined),
+        },
+      });
       try {
         const res = await fetch(`/api/conversations/${userId}`, {
           method: "PATCH",

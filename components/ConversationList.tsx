@@ -15,8 +15,16 @@ const WAIT_PILL = {
   late: "bg-red text-ground",
 } as const;
 
+/** Which chats the list shows: everyone's, the signed-in agent's, or nobody's yet. */
+export type Scope = "all" | "mine" | "unassigned";
+
 interface Props {
   conversations: Conversation[];
+  scope: Scope;
+  onScope: (scope: Scope) => void;
+  /** Chats per scope, before the search filter. */
+  counts: Record<Scope, number>;
+  me: string;
   selectedId: string | null;
   query: string;
   onQuery: (q: string) => void;
@@ -27,7 +35,7 @@ interface Props {
 }
 
 export const ConversationList = forwardRef<HTMLInputElement, Props>(function ConversationList(
-  { conversations, selectedId, query, onQuery, onSelect, onMenu, now },
+  { conversations, scope, onScope, counts, me, selectedId, query, onQuery, onSelect, onMenu, now },
   searchRef,
 ) {
   const { t, lang } = useLang();
@@ -51,6 +59,23 @@ export const ConversationList = forwardRef<HTMLInputElement, Props>(function Con
             {waitingCount} {t("waiting")}
           </span>
         )}
+      </div>
+      <div role="tablist" aria-label={t("conversations")} className="mx-3 mb-3 grid grid-cols-3 rounded-md border border-rule p-0.5 text-[13px]">
+        {(["all", "mine", "unassigned"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="tab"
+            aria-selected={scope === s}
+            onClick={() => onScope(s)}
+            className={`flex h-7 items-center justify-center gap-1.5 rounded transition-colors ${
+              scope === s ? "bg-hover text-ink" : "text-ink-3 hover:text-ink-1"
+            }`}
+          >
+            {t(s === "all" ? "scopeAll" : s === "mine" ? "scopeMine" : "scopeUnassigned")}
+            <span className="font-mono text-[11px] text-ink-3">{counts[s]}</span>
+          </button>
+        ))}
       </div>
       <div className="px-3 pb-3">
         <label className="relative block">
@@ -108,6 +133,16 @@ export const ConversationList = forwardRef<HTMLInputElement, Props>(function Con
                     )}
                     {c.pinned && <Pin className="size-3 shrink-0 text-ink-3" aria-label={t("pinned")} />}
                     {c.muted && <BellOff className="size-3 shrink-0 text-ink-3" aria-label={t("muted")} />}
+                    {c.assignee && (
+                      <span
+                        title={t("assignee")}
+                        className={`shrink-0 truncate font-mono text-[10px] leading-4 ${
+                          c.assignee === me ? "text-go" : "text-ink-3"
+                        }`}
+                      >
+                        @{c.assignee === me ? t("you") : c.assignee}
+                      </span>
+                    )}
                   </span>
                   <span
                     key={c.lastAt}
@@ -154,8 +189,8 @@ export const ConversationList = forwardRef<HTMLInputElement, Props>(function Con
             </li>
           );
         })}
-        {conversations.length === 0 && query && (
-          <li className="px-4 py-6 text-ink-3">{t("noMatches", { q: query })}</li>
+        {conversations.length === 0 && (
+          <li className="px-4 py-6 text-ink-3">{query ? t("noMatches", { q: query }) : t("noneInScope")}</li>
         )}
       </ul>
     </div>

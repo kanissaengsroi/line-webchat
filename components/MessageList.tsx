@@ -30,6 +30,9 @@ const TYPE_ICON: Partial<Record<MessageType, LucideIcon>> = {
   unknown: CircleHelp,
 };
 
+// Customers see which agent replied only when replies in LINE are signed too.
+const SHOW_AGENT_NAME = process.env.NEXT_PUBLIC_SHOW_AGENT_NAME === "true";
+
 /** Whose side of the conversation the reader is on. */
 export type Perspective = "agent" | "customer";
 
@@ -149,6 +152,7 @@ function MessageRow({
     if (m.echoed === true) meta.push(t("echoedToLine"));
     if (m.webOnly || m.echoed === false) meta.push(t("webOnly"));
   } else {
+    if (m.dir === "out" && m.agent && SHOW_AGENT_NAME) meta.push(m.agent);
     meta.push(formatClock(m.at, lang));
     if (m.dir === "in" && m.via !== "web") meta.push(t("fromLineApp"));
     if (m.echoed === true) meta.push(t("echoedToLine"));

@@ -44,6 +44,8 @@ export interface Conversation {
   pinned?: boolean;
   /** Staff muted it: no unread highlight, not counted as waiting. */
   muted?: boolean;
+  /** Staff username that owns this chat; absent = unassigned. */
+  assignee?: string;
 }
 
 export interface MessageEvent {
@@ -61,7 +63,8 @@ export type Channel = "line" | "web";
 export const channelOf = (convId: string): Channel => (convId.startsWith("web-") ? "web" : "line");
 export const MAX_TEXT = 5000;
 
-export type ConversationFlags = Pick<Conversation, "pinned" | "muted">;
+/** Staff-set fields. `assignee: null` clears the owner. */
+export type ConversationFlags = Partial<Pick<Conversation, "pinned" | "muted">> & { assignee?: string | null };
 
 /** Inbox order: pinned first, then most recent. */
 export function compareConversations(a: Conversation, b: Conversation) {

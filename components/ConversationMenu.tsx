@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bell, BellOff, Pin, PinOff, Trash2, type LucideIcon } from "lucide-react";
+import { Bell, BellOff, Pin, PinOff, Trash2, UserCheck, UserMinus, type LucideIcon } from "lucide-react";
 import { useLang } from "./LangProvider";
 import type { Conversation } from "@/lib/types";
 
-export type ConversationAction = "pin" | "mute" | "delete";
+export type ConversationAction = "pin" | "mute" | "delete" | "assign-me" | "unassign";
 
 interface Props {
   conversation: Conversation;
+  /** The signed-in agent, to offer "assign to me". */
+  me: string;
   onAction: (action: ConversationAction) => void;
   onClose: () => void;
   /** Where to anchor: below the trigger, or at a right-click point. */
@@ -16,7 +18,7 @@ interface Props {
 }
 
 /** Pin / mute / delete menu for one conversation. Closes on outside click or Escape. */
-export function ConversationMenu({ conversation: c, onAction, onClose, position }: Props) {
+export function ConversationMenu({ conversation: c, me, onAction, onClose, position }: Props) {
   const { t } = useLang();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -54,7 +56,7 @@ export function ConversationMenu({ conversation: c, onAction, onClose, position 
 
   // Keep the menu on screen.
   const left = Math.min(position.left, (typeof window !== "undefined" ? window.innerWidth : 9999) - 216);
-  const top = Math.min(position.top, (typeof window !== "undefined" ? window.innerHeight : 9999) - 150);
+  const top = Math.min(position.top, (typeof window !== "undefined" ? window.innerHeight : 9999) - 200);
 
   const item = (action: ConversationAction, Icon: LucideIcon, label: string, danger = false) => (
     <button
@@ -81,6 +83,8 @@ export function ConversationMenu({ conversation: c, onAction, onClose, position 
       style={{ top, left }}
       className="rise fixed z-50 w-52 rounded-xl border border-rule-strong bg-raised p-1 shadow-[0_12px_32px_-8px_oklch(0_0_0/0.6)]"
     >
+      {c.assignee !== me && item("assign-me", UserCheck, t("assignToMe"))}
+      {c.assignee && item("unassign", UserMinus, t("unassign"))}
       {item("pin", c.pinned ? PinOff : Pin, t(c.pinned ? "unpin" : "pin"))}
       {item("mute", c.muted ? Bell : BellOff, t(c.muted ? "unmute" : "mute"))}
       <div className="my-1 h-px bg-rule" aria-hidden />

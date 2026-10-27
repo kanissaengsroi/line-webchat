@@ -85,6 +85,7 @@ function fromHash(userId: string, raw: Record<string, unknown> | null): Conversa
     web: bool(raw.web),
     pinned: bool(raw.pinned),
     muted: bool(raw.muted),
+    assignee: raw.assignee ? String(raw.assignee) : undefined,
   };
 }
 
@@ -102,6 +103,7 @@ function toHash(conv: Conversation): Record<string, string | number> {
     web: conv.web ? "true" : "false",
     pinned: conv.pinned ? "true" : "false",
     muted: conv.muted ? "true" : "false",
+    assignee: conv.assignee ?? "",
   };
 }
 
@@ -109,6 +111,7 @@ function applyFlags(conv: Conversation, flags: ConversationFlags): Conversation 
   const next = { ...conv };
   if (flags.pinned !== undefined) next.pinned = flags.pinned;
   if (flags.muted !== undefined) next.muted = flags.muted;
+  if (flags.assignee !== undefined) next.assignee = flags.assignee ?? undefined;
   return next;
 }
 

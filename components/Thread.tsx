@@ -25,6 +25,10 @@ interface Props {
   onRetry: (id: string) => void;
   onDiscard: (id: string) => void;
   onMenu: (position: { top: number; left: number }) => void;
+  me: string;
+  /** Staff usernames that can own a chat (empty in development = only "me"). */
+  staff: string[];
+  onAssign: (assignee: string | null) => void;
 }
 
 export function Thread({
@@ -37,11 +41,16 @@ export function Thread({
   onRetry,
   onDiscard,
   onMenu,
+  me,
+  staff,
+  onAssign,
 }: Props) {
   const { t } = useLang();
   const wait = c.waitingSince ? now - c.waitingSince : 0;
   const level = c.muted ? "calm" : waitLevel(wait);
   const web = channelOf(c.userId) === "web";
+  // Everyone who can own a chat, plus the current owner if they left the staff list.
+  const owners = [...new Set([...(staff.length ? staff : [me]), ...(c.assignee ? [c.assignee] : [])])];
 
   return (
     <section aria-label={c.displayName} className="flex h-full min-h-0 flex-col">
@@ -76,6 +85,23 @@ export function Thread({
             )}
           </p>
         </div>
+        <label className="hidden shrink-0 items-center gap-2 text-xs text-ink-3 sm:flex">
+          {t("assignee")}
+          <select
+            value={c.assignee ?? ""}
+            onChange={(e) => onAssign(e.target.value || null)}
+            className={`h-8 rounded-md border border-rule-strong bg-ground px-2 font-mono text-xs focus:border-ink-3 focus:outline-none ${
+              c.assignee ? (c.assignee === me ? "text-go" : "text-ink-1") : "text-ink-3"
+            }`}
+          >
+            <option value="">{t("unassigned")}</option>
+            {owners.map((name) => (
+              <option key={name} value={name}>
+                {name === me ? `${name} (${t("you")})` : name}
+              </option>
+            ))}
+          </select>
+        </label>
         <span
           className={`shrink-0 rounded-full border px-2.5 py-1 font-mono text-xs ${
             c.waitingSince ? WAIT_CHIP[level] : "border-rule text-ink-3"
