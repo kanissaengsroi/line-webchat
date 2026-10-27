@@ -1,7 +1,6 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getSession, unauthorized } from "@/lib/auth";
-import { LineApiError, pushText } from "@/lib/line";
+import { LineApiError, pushText, retryKeyFor } from "@/lib/line";
 import { publishMessage } from "@/lib/pusher";
 import { getStore } from "@/lib/store";
 import { CONV_ID, MAX_TEXT, channelOf, type ChatMessage } from "@/lib/types";
@@ -50,8 +49,7 @@ export async function POST(req: Request, { params }: Params) {
   // and on the website too if they chat there.
   if (channelOf(userId) === "line") {
     try {
-      // LINE requires the retry key to be a UUID; derive a stable one from the client id.
-      await pushText(userId, text, toUuid(id));
+      await pushText(userId, text, retryKeyFor(id));
     } catch (err) {
       const status = err instanceof LineApiError ? err.status : 0;
       console.error("[send] LINE push failed", status, err);
@@ -68,10 +66,4 @@ export async function POST(req: Request, { params }: Params) {
   const conversation = await store.appendMessage(userId, message);
   await publishMessage({ conversation, message });
   return NextResponse.json({ conversation, message });
-}
-
-/** Formats the first 32 hex chars of a SHA-256 of the id as a UUID. */
-function toUuid(id: string): string {
-  const hex = createHash("sha256").update(id).digest("hex");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }

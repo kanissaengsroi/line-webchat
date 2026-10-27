@@ -1,8 +1,11 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSession, unauthorized } from "@/lib/auth";
+import { LANG_COOKIE } from "@/lib/i18n";
+import { LineApiError, pushText, retryKeyFor } from "@/lib/line";
 import { publishMessage } from "@/lib/pusher";
 import { getStore } from "@/lib/store";
-import { MAX_TEXT, type ChatMessage } from "@/lib/types";
+import { MAX_TEXT, channelOf, type ChatMessage } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +48,23 @@ export async function POST(req: Request) {
   }
 
   const message: ChatMessage = { id, dir: "in", type: "text", text, at: Date.now(), via: "web" };
+
+  // A LINE user typing on the website: LINE has no API to post as the user, so the OA pushes a
+  // labeled copy into their LINE chat. Inside LINE (LIFF) messages go out as the user instead
+  // and never reach this route.
+  if (channelOf(session.convId) === "line") {
+    const lang = (await cookies()).get(LANG_COOKIE)?.value === "en" ? "en" : "th";
+    const label = lang === "en" ? "💬 You sent from the web:" : "💬 คุณส่งจากเว็บ:";
+    try {
+      await pushText(session.convId, `${label} ${text}`.slice(0, MAX_TEXT), retryKeyFor(id));
+      message.echoed = true;
+    } catch (err) {
+      // Usually: they haven't added the OA as a friend. Staff still get the message.
+      console.error("[me] LINE echo failed", err instanceof LineApiError ? err.status : 0, err);
+      message.echoed = false;
+    }
+  }
+
   const conversation = await store.appendMessage(session.convId, message);
   await publishMessage({ conversation, message });
   return NextResponse.json({ message });

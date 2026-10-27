@@ -58,6 +58,12 @@ export async function getBotInfo(): Promise<BotInfo | null> {
   }
 }
 
+/** LINE wants a UUID retry key; derive a stable one from our message id so retries dedupe. */
+export function retryKeyFor(id: string): string {
+  const hex = crypto.createHash("sha256").update(id).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 /** Sends a text message from the OA to one LINE user. */
 export async function pushText(to: string, text: string, retryKey: string): Promise<void> {
   const token = env.lineAccessToken;

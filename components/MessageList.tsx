@@ -146,11 +146,15 @@ function MessageRow({
     if (m.dir === "out" && m.agent) meta.push(m.agent);
     meta.push(formatClock(m.at, lang));
     if (m.dir === "in" && m.via === "web") meta.push(t("viaWeb"));
-    if (m.webOnly) meta.push(t("webOnly"));
+    if (m.echoed === true) meta.push(t("echoedToLine"));
+    if (m.webOnly || m.echoed === false) meta.push(t("webOnly"));
   } else {
     meta.push(formatClock(m.at, lang));
     if (m.dir === "in" && m.via !== "web") meta.push(t("fromLineApp"));
+    if (m.echoed === true) meta.push(t("echoedToLine"));
+    if (m.echoed === false) meta.push(t("notInLine"));
   }
+  const warn = m.webOnly || m.echoed === false;
   if (m.status === "sending") meta.push(t("sending"));
 
   return (
@@ -189,8 +193,8 @@ function MessageRow({
           </button>
         </div>
       ) : (
-        (endsGroup || m.status === "sending" || m.webOnly) && (
-          <div className={`mt-1 px-1 font-mono text-[11px] ${m.webOnly ? "text-amber" : "text-ink-3"}`}>
+        (endsGroup || m.status === "sending" || warn) && (
+          <div className={`mt-1 px-1 font-mono text-[11px] ${warn ? "text-amber" : "text-ink-3"}`}>
             {meta.join(" · ")}
           </div>
         )

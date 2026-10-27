@@ -22,6 +22,8 @@ export interface ChatMessage {
   via?: "web";
   /** Outbound only: LINE push failed (e.g. not a friend), so only the website shows it. */
   webOnly?: boolean;
+  /** Inbound web message from a LINE user: true if the OA copied it into their LINE chat. */
+  echoed?: boolean;
 }
 
 export interface Conversation {

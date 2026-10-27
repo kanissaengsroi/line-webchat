@@ -62,7 +62,7 @@ const th = {
   err_line_push_failed: "LINE ไม่รับข้อความ: {detail}",
   err_generic: "ส่งไม่สำเร็จ ลองอีกครั้ง",
   viaWeb: "ทางเว็บ",
-  webOnly: "ส่งทางเว็บเท่านั้น (ยังไม่ได้เพิ่ม OA เป็นเพื่อน)",
+  webOnly: "ไม่เข้า LINE (ยังไม่ได้เพิ่ม OA เป็นเพื่อน)",
   fromLineApp: "จากแอป LINE",
   webGuest: "ผู้ใช้เว็บ (ชื่อชั่วคราว)",
   alsoOnWeb: "แชทบนเว็บด้วย",
@@ -97,13 +97,15 @@ const th = {
   deleteBodyWeb: "ประวัติข้อความทั้งหมดจะถูกลบและกู้คืนไม่ได้ ผู้ใช้เว็บจะเห็นแชทว่างเปล่า",
   deleteFailed: "ลบไม่สำเร็จ ลองอีกครั้ง",
   cancel: "ยกเลิก",
+  echoedToLine: "คัดลอกเข้า LINE แล้ว",
+  notInLine: "ไม่เข้า LINE: ยังไม่ได้เพิ่ม OA เป็นเพื่อน",
   liffNote: "ข้อความจะถูกส่งในแชท LINE ที่เปิดหน้านี้ เหมือนพิมพ์ในแอป LINE",
   openInLine: "เปิดในแอป LINE",
   liffLoading: "กำลังเชื่อมต่อกับ LINE…",
   liffFailed: "เปิดผ่าน LINE ไม่สำเร็จ",
   liffRetry: "ลองอีกครั้ง",
   liffUseWeb: "ใช้เว็บแชทแทน",
-  customerLineNote: "คำตอบจะส่งถึงแอป LINE ของคุณด้วย เปิดหน้านี้ในแอป LINE เพื่อให้ข้อความของคุณขึ้นในแชท LINE ด้วย",
+  customerLineNote: "ข้อความที่คุณส่งจากเว็บจะถูกคัดลอกเข้าแชท LINE ของคุณโดย OA และคำตอบจะส่งถึงแอป LINE ด้วย"
 };
 
 type Dict = typeof th;
@@ -167,7 +169,7 @@ const en: Dict = {
   err_line_push_failed: "LINE rejected the message: {detail}",
   err_generic: "Couldn't send. Try again.",
   viaWeb: "via web",
-  webOnly: "Web only (hasn't added the OA as a friend)",
+  webOnly: "not in LINE (not a friend of the OA)",
   fromLineApp: "from LINE app",
   webGuest: "Web guest (temporary name)",
   alsoOnWeb: "also on web",
@@ -202,13 +204,15 @@ const en: Dict = {
   deleteBodyWeb: "All message history is deleted and can't be recovered. The web user will see an empty chat.",
   deleteFailed: "Couldn't delete. Try again.",
   cancel: "Cancel",
+  echoedToLine: "copied to LINE",
+  notInLine: "Not in LINE: add the OA as a friend",
   liffNote: "Messages are sent in the LINE chat that opened this page, just like typing in LINE.",
   openInLine: "Open in LINE app",
   liffLoading: "Connecting to LINE…",
   liffFailed: "Couldn't open through LINE",
   liffRetry: "Try again",
   liffUseWeb: "Use the web chat instead",
-  customerLineNote: "Replies also reach your LINE app. Open this page in the LINE app to make your messages show in your LINE chat too.",
+  customerLineNote: "Messages you send here are copied into your LINE chat by the OA, and replies reach your LINE app too.",
 };
 
 const dicts: Record<Lang, Dict> = { th, en };
