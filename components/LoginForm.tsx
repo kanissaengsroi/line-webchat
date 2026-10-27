@@ -5,20 +5,16 @@ import { ArrowRight, LoaderCircle, MessageCircle } from "lucide-react";
 import { BrandMark } from "./BrandMark";
 import { LangToggle } from "./LangToggle";
 import { useLang } from "./LangProvider";
-import type { TKey } from "@/lib/i18n";
 
 const USERNAME_PATTERN = /^[\p{L}\p{M}\p{N}._-]{2,32}$/u;
-const LINE_ERRORS = ["line_cancelled", "line_failed", "line_not_configured"] as const;
 
 type Tab = "customer" | "staff";
 
-export function LoginForm({ lineEnabled, error: initialError }: { lineEnabled: boolean; error?: string }) {
+export function LoginForm({ lineEnabled }: { lineEnabled: boolean }) {
   const { t } = useLang();
   const [tab, setTab] = useState<Tab>("customer");
   const [username, setUsername] = useState("");
-  const [error, setError] = useState<string | null>(
-    (LINE_ERRORS as readonly string[]).includes(initialError ?? "") ? t(initialError as TKey) : null,
-  );
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"line" | "name" | null>(null);
 
   async function submit(e: React.FormEvent) {
@@ -91,7 +87,9 @@ export function LoginForm({ lineEnabled, error: initialError }: { lineEnabled: b
           {tab === "customer" && lineEnabled && (
             <>
               <a
-                href="/api/auth/line"
+                // LINE login always goes through the LIFF page: inside LINE it signs in silently and
+                // sends as the user; in a browser LIFF runs LINE Login and the chat is web-only.
+                href="/liff"
                 onClick={() => setBusy("line")}
                 className="mt-8 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-go font-semibold text-on-go transition-colors hover:bg-go-hover"
               >
