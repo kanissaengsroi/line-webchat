@@ -9,6 +9,7 @@ import { useLang } from "./LangProvider";
 import { MessageList } from "./MessageList";
 import { useCustomerChat } from "@/hooks/useCustomerChat";
 import { useNow } from "@/hooks/useNow";
+import { signOut } from "@/lib/signOut";
 import { channelOf } from "@/lib/types";
 
 const OA_URL = process.env.NEXT_PUBLIC_LINE_OA_URL;
@@ -29,11 +30,6 @@ export function CustomerChat({ convId, username, picture, oa, sendViaLine }: Pro
   const chat = useCustomerChat(convId, sendViaLine);
   const viaLine = channelOf(convId) === "line";
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-    window.location.assign("/login");
-  }
-
   return (
     <div className="flex h-dvh flex-col">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-rule bg-panel px-3 sm:px-4">
@@ -52,7 +48,7 @@ export function CustomerChat({ convId, username, picture, oa, sendViaLine }: Pro
           <LangToggle />
           <button
             type="button"
-            onClick={logout}
+            onClick={signOut}
             className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] text-ink-2 hover:bg-raised hover:text-ink"
           >
             <LogOut className="size-4" aria-hidden />

@@ -11,6 +11,7 @@ import { useLang } from "./LangProvider";
 import { Thread } from "./Thread";
 import { useInbox, type Connection } from "@/hooks/useInbox";
 import { useNow } from "@/hooks/useNow";
+import { signOut } from "@/lib/signOut";
 
 const OA_URL = process.env.NEXT_PUBLIC_LINE_OA_URL;
 
@@ -92,11 +93,6 @@ export function Inbox({ username }: { username: string }) {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-    window.location.assign("/login");
-  }
-
   const empty = inbox.listLoaded && !inbox.listError && inbox.conversations.length === 0;
 
   return (
@@ -112,7 +108,7 @@ export function Inbox({ username }: { username: string }) {
           <LangToggle />
           <button
             type="button"
-            onClick={logout}
+            onClick={signOut}
             className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] text-ink-2 hover:bg-raised hover:text-ink"
           >
             <LogOut className="size-4" aria-hidden />
