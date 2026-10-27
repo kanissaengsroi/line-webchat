@@ -24,6 +24,8 @@ export function authorizeUrl(channelId: string, redirectUri: string, state: stri
     scope: "profile openid",
     // Offers to add the linked OA as a friend, so agent replies also reach the LINE app.
     bot_prompt: "aggressive",
+    // On desktop, open LINE's QR-code login first (scan with the LINE app) instead of email/password.
+    initial_amr_display: "lpqr",
   });
   return `https://access.line.me/oauth2/v2.1/authorize?${params}`;
 }
