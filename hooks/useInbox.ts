@@ -28,12 +28,19 @@ type Action =
   | { type: "sendFailed"; userId: string; id: string; error: string }
   | { type: "discard"; userId: string; id: string };
 
-function upsertMessage(list: UIMessage[], message: UIMessage): UIMessage[] {
-  const i = list.findIndex((m) => m.id === message.id);
-  if (i === -1) return [...list, message].sort((a, b) => a.at - b.at);
-  const next = list.slice();
-  next[i] = message;
-  return next;
+/**
+ * Orders a thread by server time. Unsent local messages carry the browser's clock, which can
+ * be off from the server's, so they always stay at the bottom until the server copy replaces them.
+ */
+function byTime(a: UIMessage, b: UIMessage) {
+  const pa = a.status ? 1 : 0;
+  const pb = b.status ? 1 : 0;
+  return pa - pb || a.at - b.at;
+}
+
+/** Adds or replaces a message (matched by id) and keeps the thread in order. */
+export function upsertMessage(list: UIMessage[], message: UIMessage): UIMessage[] {
+  return [...list.filter((m) => m.id !== message.id), message].sort(byTime);
 }
 
 function reducer(state: State, action: Action): State {
@@ -48,7 +55,7 @@ function reducer(state: State, action: Action): State {
     case "thread": {
       // Keep unsent local messages when the server copy arrives.
       const pending = (state.messages[action.userId] ?? []).filter((m) => m.status);
-      let merged: UIMessage[] = action.messages;
+      let merged: UIMessage[] = [...action.messages].sort(byTime);
       for (const p of pending) if (!merged.some((m) => m.id === p.id)) merged = upsertMessage(merged, p);
       return {
         ...state,

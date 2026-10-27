@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, MessageEvent } from "@/lib/types";
-import type { Connection, UIMessage } from "./useInbox";
+import { upsertMessage, type Connection, type UIMessage } from "./useInbox";
 
 const POLL_MS = 4000;
 const PUSHER_KEY = process.env.NEXT_PUBLIC_PUSHER_KEY;
@@ -12,13 +12,7 @@ function newId() {
   return `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function upsert(list: UIMessage[], message: UIMessage) {
-  const i = list.findIndex((m) => m.id === message.id);
-  if (i === -1) return [...list, message].sort((a, b) => a.at - b.at);
-  const next = list.slice();
-  next[i] = message;
-  return next;
-}
+const upsert = upsertMessage;
 
 /** The signed-in customer's own thread with the OA, kept live. */
 export function useCustomerChat(convId: string) {
@@ -35,7 +29,7 @@ export function useCustomerChat(convId: string) {
       const data = (await res.json()) as { messages: ChatMessage[] };
       // Keep unsent local messages when the server copy arrives.
       setMessages((current) => {
-        let merged: UIMessage[] = data.messages;
+        let merged: UIMessage[] = [...data.messages].sort((a, b) => a.at - b.at);
         for (const p of current ?? []) if (p.status && !merged.some((m) => m.id === p.id)) merged = upsert(merged, p);
         return merged;
       });

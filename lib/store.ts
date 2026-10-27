@@ -131,7 +131,8 @@ class RedisStore implements Store {
     const raw = await this.redis.lrange<ChatMessage | string>(`msgs:${userId}`, 0, limit - 1);
     return raw
       .map((m) => (typeof m === "string" ? (JSON.parse(m) as ChatMessage) : m))
-      .reverse();
+      // Stored in arrival order; a late webhook can arrive after a newer reply, so order by time.
+      .sort((a, b) => a.at - b.at);
   }
 
   async markRead(userId: string) {
@@ -173,7 +174,7 @@ class MemoryStore implements Store {
   }
 
   async getMessages(userId: string, limit = 200) {
-    return (this.msgs.get(userId) ?? []).slice(-limit);
+    return (this.msgs.get(userId) ?? []).slice(-limit).sort((a, b) => a.at - b.at);
   }
 
   async markRead(userId: string) {
