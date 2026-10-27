@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useRef } from "react";
-import { Globe, Search } from "lucide-react";
+import { BellOff, Globe, MoreHorizontal, Pin, Search } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { useLang } from "./LangProvider";
 import { formatListTime, formatWait, waitLevel } from "@/lib/format";
@@ -21,16 +21,18 @@ interface Props {
   query: string;
   onQuery: (q: string) => void;
   onSelect: (id: string) => void;
+  /** Opens the pin / mute / delete menu for a row at a screen position. */
+  onMenu: (id: string, position: { top: number; left: number }) => void;
   now: number;
 }
 
 export const ConversationList = forwardRef<HTMLInputElement, Props>(function ConversationList(
-  { conversations, selectedId, query, onQuery, onSelect, now },
+  { conversations, selectedId, query, onQuery, onSelect, onMenu, now },
   searchRef,
 ) {
   const { t, lang } = useLang();
   const listRef = useRef<HTMLUListElement>(null);
-  const waitingCount = conversations.filter((c) => c.waitingSince).length;
+  const waitingCount = conversations.filter((c) => c.waitingSince && !c.muted).length;
 
   // Keep the selected row in view when moving with the keyboard.
   useEffect(() => {
@@ -72,14 +74,19 @@ export const ConversationList = forwardRef<HTMLInputElement, Props>(function Con
         {conversations.map((c) => {
           const selected = c.userId === selectedId;
           const wait = c.waitingSince ? now - c.waitingSince : 0;
-          const level = waitLevel(wait);
+          // Muted chats never escalate to amber / red.
+          const level = c.muted ? "calm" : waitLevel(wait);
           const preview = c.lastType === "text" ? c.lastText : typeLabel(lang, c.lastType);
           return (
-            <li key={c.userId} data-id={c.userId}>
+            <li key={c.userId} data-id={c.userId} className="group relative">
               <button
                 type="button"
                 aria-current={selected ? "true" : undefined}
                 onClick={() => onSelect(c.userId)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  onMenu(c.userId, { top: e.clientY, left: e.clientX });
+                }}
                 className={`grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5 text-left transition-colors focus-visible:-outline-offset-2 ${
                   selected ? "bg-hover" : "hover:bg-raised"
                 }`}
@@ -99,6 +106,8 @@ export const ConversationList = forwardRef<HTMLInputElement, Props>(function Con
                         WEB
                       </span>
                     )}
+                    {c.pinned && <Pin className="size-3 shrink-0 text-ink-3" aria-label={t("pinned")} />}
+                    {c.muted && <BellOff className="size-3 shrink-0 text-ink-3" aria-label={t("muted")} />}
                   </span>
                   <span
                     key={c.lastAt}
@@ -120,12 +129,27 @@ export const ConversationList = forwardRef<HTMLInputElement, Props>(function Con
                   )}
                   {c.unread > 0 && (
                     <span
-                      className={`min-w-5 rounded-full px-1.5 text-center font-mono text-[11px] leading-5 font-medium ${WAIT_PILL[level]}`}
+                      className={`min-w-5 rounded-full px-1.5 text-center font-mono text-[11px] leading-5 font-medium ${
+                        c.muted ? "bg-hover text-ink-3" : WAIT_PILL[level]
+                      }`}
                     >
                       {c.unread > 99 ? "99+" : c.unread}
                     </span>
                   )}
                 </span>
+              </button>
+              {/* Shown on hover / keyboard focus. On touch screens use the menu in the chat header. */}
+              <button
+                type="button"
+                aria-label={t("moreActions", { name: c.displayName })}
+                aria-haspopup="menu"
+                onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  onMenu(c.userId, { top: r.bottom + 4, left: r.right - 208 });
+                }}
+                className="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md border border-rule-strong bg-raised text-ink-2 pointer-events-none opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 hover:text-ink focus-visible:pointer-events-auto focus-visible:opacity-100"
+              >
+                <MoreHorizontal className="size-4" aria-hidden />
               </button>
             </li>
           );

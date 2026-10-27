@@ -38,6 +38,10 @@ export interface Conversation {
   blocked?: boolean;
   /** A LINE user who has also chatted from the website (signed in with LINE Login). */
   web?: boolean;
+  /** Staff pinned it to the top of the inbox. */
+  pinned?: boolean;
+  /** Staff muted it: no unread highlight, not counted as waiting. */
+  muted?: boolean;
 }
 
 export interface MessageEvent {
@@ -54,3 +58,10 @@ export const CONV_ID = /^(U[0-9a-f]{32}|web-[0-9a-f]{24})$/;
 export type Channel = "line" | "web";
 export const channelOf = (convId: string): Channel => (convId.startsWith("web-") ? "web" : "line");
 export const MAX_TEXT = 5000;
+
+export type ConversationFlags = Pick<Conversation, "pinned" | "muted">;
+
+/** Inbox order: pinned first, then most recent. */
+export function compareConversations(a: Conversation, b: Conversation) {
+  return Number(!!b.pinned) - Number(!!a.pinned) || b.lastAt - a.lastAt;
+}

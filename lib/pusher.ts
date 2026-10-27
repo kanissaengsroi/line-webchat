@@ -1,6 +1,6 @@
 import Pusher from "pusher";
 import { env } from "./env";
-import type { MessageEvent } from "./types";
+import type { Conversation, MessageEvent } from "./types";
 
 export const INBOX_CHANNEL = "private-inbox";
 export const MESSAGE_EVENT = "message:new";
@@ -36,6 +36,33 @@ export async function publishMessage(event: MessageEvent): Promise<void> {
     await pusher.trigger([INBOX_CHANNEL, customerChannel(conversation.userId)], MESSAGE_EVENT, payload);
   } catch (err) {
     // Realtime is best effort; clients resync on reconnect.
+    console.error("[pusher] trigger failed", err);
+  }
+}
+
+export const UPDATE_EVENT = "conv:update";
+export const DELETE_EVENT = "conv:delete";
+
+/** Pin / mute changed: other staff tabs re-sort their inbox. */
+export async function publishConversation(conversation: Conversation): Promise<void> {
+  const pusher = getPusher();
+  if (!pusher) return;
+  try {
+    await pusher.trigger(INBOX_CHANNEL, UPDATE_EVENT, {
+      conversation: { ...conversation, lastText: conversation.lastText.slice(0, 200) },
+    });
+  } catch (err) {
+    console.error("[pusher] trigger failed", err);
+  }
+}
+
+/** Conversation deleted: staff drop it; the customer's open chat clears. */
+export async function publishDelete(userId: string): Promise<void> {
+  const pusher = getPusher();
+  if (!pusher) return;
+  try {
+    await pusher.trigger([INBOX_CHANNEL, customerChannel(userId)], DELETE_EVENT, { userId });
+  } catch (err) {
     console.error("[pusher] trigger failed", err);
   }
 }

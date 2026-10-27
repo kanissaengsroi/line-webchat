@@ -63,10 +63,13 @@ export function useCustomerChat(convId: string) {
           setConnection(wasLive ? "reconnecting" : "connecting");
         }
       });
-      pusher.subscribe(`private-user-${convId}`).bind("message:new", (event: MessageEvent) => {
+      const channel = pusher.subscribe(`private-user-${convId}`);
+      channel.bind("message:new", (event: MessageEvent) => {
         if (event.truncated) return void load();
         setMessages((current) => upsert(current ?? [], event.message));
       });
+      // Staff deleted this conversation: start over with an empty chat.
+      channel.bind("conv:delete", () => setMessages([]));
       cleanup = () => pusher.disconnect();
     });
     return () => {

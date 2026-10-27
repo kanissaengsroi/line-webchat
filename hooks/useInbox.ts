@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import type { ChatMessage, Conversation, MessageEvent } from "@/lib/types";
+import {
+  compareConversations,
+  type ChatMessage,
+  type Conversation,
+  type ConversationFlags,
+  type MessageEvent,
+} from "@/lib/types";
 
 export type SendStatus = "sending" | "failed";
 export interface UIMessage extends ChatMessage {
@@ -24,6 +30,8 @@ type Action =
   | { type: "thread"; userId: string; conversation: Conversation; messages: ChatMessage[] }
   | { type: "receive"; event: MessageEvent }
   | { type: "read"; userId: string }
+  | { type: "update"; conversation: Conversation }
+  | { type: "remove"; userId: string }
   | { type: "sending"; userId: string; message: UIMessage }
   | { type: "sendFailed"; userId: string; id: string; error: string }
   | { type: "discard"; userId: string; id: string };
@@ -77,6 +85,18 @@ function reducer(state: State, action: Action): State {
       const conv = state.conversations[action.userId];
       if (!conv || conv.unread === 0) return state;
       return { ...state, conversations: { ...state.conversations, [action.userId]: { ...conv, unread: 0 } } };
+    }
+    case "update": {
+      const { conversation } = action;
+      if (!state.conversations[conversation.userId]) return state;
+      return { ...state, conversations: { ...state.conversations, [conversation.userId]: conversation } };
+    }
+    case "remove": {
+      const conversations = { ...state.conversations };
+      const messages = { ...state.messages };
+      delete conversations[action.userId];
+      delete messages[action.userId];
+      return { ...state, conversations, messages };
     }
     case "sending":
       return {
@@ -213,6 +233,10 @@ export function useInbox(selectedId: string | null) {
         }
       });
       channel.bind("conv:read", ({ userId }: { userId: string }) => dispatch({ type: "read", userId }));
+      channel.bind("conv:update", ({ conversation }: { conversation: Conversation }) =>
+        dispatch({ type: "update", conversation }),
+      );
+      channel.bind("conv:delete", ({ userId }: { userId: string }) => dispatch({ type: "remove", userId }));
       cleanup = () => pusher.disconnect();
     });
     return () => {
@@ -259,8 +283,40 @@ export function useInbox(selectedId: string | null) {
 
   const discard = useCallback((userId: string, id: string) => dispatch({ type: "discard", userId, id }), []);
 
+  /** Pin / mute, applied at once and rolled back if the server refuses. */
+  const setFlags = useCallback(
+    async (userId: string, flags: ConversationFlags) => {
+      const before = state.conversations[userId];
+      if (!before) return;
+      dispatch({ type: "update", conversation: { ...before, ...flags } });
+      try {
+        const res = await fetch(`/api/conversations/${userId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(flags),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+      } catch {
+        dispatch({ type: "update", conversation: before });
+      }
+    },
+    [state.conversations],
+  );
+
+  /** Deletes the conversation and its history. Resolves false if the server refused. */
+  const remove = useCallback(async (userId: string) => {
+    try {
+      const res = await fetch(`/api/conversations/${userId}`, { method: "DELETE" });
+      if (!res.ok) return false;
+      dispatch({ type: "remove", userId });
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const conversations = useMemo(
-    () => Object.values(state.conversations).sort((a, b) => b.lastAt - a.lastAt),
+    () => Object.values(state.conversations).sort(compareConversations),
     [state.conversations],
   );
 
@@ -274,6 +330,8 @@ export function useInbox(selectedId: string | null) {
     send,
     retry,
     discard,
+    setFlags,
+    remove,
     reload: loadList,
   };
 }

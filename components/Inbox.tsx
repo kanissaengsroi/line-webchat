@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LogOut, MessageSquareText, RefreshCw } from "lucide-react";
 import { BrandMark } from "./BrandMark";
+import { ConfirmDelete } from "./ConfirmDelete";
+import { ConversationMenu, type ConversationAction } from "./ConversationMenu";
 import { ConversationList } from "./ConversationList";
 import { LangToggle } from "./LangToggle";
 import { useLang } from "./LangProvider";
@@ -25,6 +27,23 @@ export function Inbox({ username }: { username: string }) {
   const now = useNow();
   const searchRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const [menu, setMenu] = useState<{ userId: string; position: { top: number; left: number } } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const menuConv = menu ? inbox.byId[menu.userId] : undefined;
+  const deleteConv = confirmDelete ? inbox.byId[confirmDelete] : undefined;
+
+  function runAction(userId: string, action: ConversationAction) {
+    const c = inbox.byId[userId];
+    if (!c) return;
+    if (action === "pin") inbox.setFlags(userId, { pinned: !c.pinned });
+    else if (action === "mute") inbox.setFlags(userId, { muted: !c.muted });
+    else setConfirmDelete(userId);
+  }
+
+  // Someone else deleted the open conversation: close it.
+  useEffect(() => {
+    if (selectedId && inbox.listLoaded && !inbox.byId[selectedId]) setSelectedId(null);
+  }, [selectedId, inbox.byId, inbox.listLoaded]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -47,7 +66,7 @@ export function Inbox({ username }: { username: string }) {
   // Keyboard: / search, j/k or arrows to move, Esc back to the list.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || menu || confirmDelete) return;
       if (e.key === "Escape" && e.target === searchRef.current && query) {
         setQuery("");
         return;
@@ -137,6 +156,7 @@ export function Inbox({ username }: { username: string }) {
               query={query}
               onQuery={setQuery}
               onSelect={(id) => select(id)}
+              onMenu={(userId, position) => setMenu({ userId, position })}
               now={now}
             />
           )}
@@ -153,6 +173,7 @@ export function Inbox({ username }: { username: string }) {
               onSend={(text) => inbox.send(selected.userId, text, username)}
               onRetry={(id) => inbox.retry(selected.userId, id)}
               onDiscard={(id) => inbox.discard(selected.userId, id)}
+              onMenu={(position) => setMenu({ userId: selected.userId, position })}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-6 text-center">
@@ -163,6 +184,26 @@ export function Inbox({ username }: { username: string }) {
           )}
         </main>
       </div>
+
+      {menu && menuConv && (
+        <ConversationMenu
+          conversation={menuConv}
+          position={menu.position}
+          onAction={(action) => runAction(menuConv.userId, action)}
+          onClose={() => setMenu(null)}
+        />
+      )}
+      {deleteConv && (
+        <ConfirmDelete
+          conversation={deleteConv}
+          onConfirm={async () => {
+            const ok = await inbox.remove(deleteConv.userId);
+            if (ok && selectedId === deleteConv.userId) setSelectedId(null);
+            return ok;
+          }}
+          onClose={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }

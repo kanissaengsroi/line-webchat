@@ -1,6 +1,12 @@
 import { Redis } from "@upstash/redis";
 import { env } from "./env";
-import type { ChatMessage, Conversation, MessageType } from "./types";
+import {
+  compareConversations,
+  type ChatMessage,
+  type Conversation,
+  type ConversationFlags,
+  type MessageType,
+} from "./types";
 
 const MAX_HISTORY = 500;
 
@@ -17,7 +23,13 @@ export interface Store {
   appendMessage(userId: string, message: ChatMessage): Promise<Conversation>;
   getMessages(userId: string, limit?: number): Promise<ChatMessage[]>;
   markRead(userId: string): Promise<void>;
+  /** Updates pin / mute; returns null if the conversation does not exist. */
+  setFlags(userId: string, flags: ConversationFlags): Promise<Conversation | null>;
+  /** Removes the conversation and its history. A new message starts it again. */
+  deleteConversation(userId: string): Promise<void>;
 }
+
+const bool = (v: unknown) => v === true || v === "true";
 
 function emptyConversation(userId: string): Conversation {
   return {
@@ -69,8 +81,10 @@ function fromHash(userId: string, raw: Record<string, unknown> | null): Conversa
     lastAt: Number(raw.lastAt ?? 0),
     waitingSince: Number(raw.waitingSince ?? 0),
     unread: Number(raw.unread ?? 0),
-    blocked: raw.blocked === true || raw.blocked === "true",
-    web: raw.web === true || raw.web === "true",
+    blocked: bool(raw.blocked),
+    web: bool(raw.web),
+    pinned: bool(raw.pinned),
+    muted: bool(raw.muted),
   };
 }
 
@@ -86,7 +100,16 @@ function toHash(conv: Conversation): Record<string, string | number> {
     unread: conv.unread,
     blocked: conv.blocked ? "true" : "false",
     web: conv.web ? "true" : "false",
+    pinned: conv.pinned ? "true" : "false",
+    muted: conv.muted ? "true" : "false",
   };
+}
+
+function applyFlags(conv: Conversation, flags: ConversationFlags): Conversation {
+  const next = { ...conv };
+  if (flags.pinned !== undefined) next.pinned = flags.pinned;
+  if (flags.muted !== undefined) next.muted = flags.muted;
+  return next;
 }
 
 class RedisStore implements Store {
@@ -104,7 +127,8 @@ class RedisStore implements Store {
     const rows = await pipe.exec<(Record<string, unknown> | null)[]>();
     return ids
       .map((id, i) => fromHash(String(id), rows[i]))
-      .filter((c): c is Conversation => c !== null);
+      .filter((c): c is Conversation => c !== null)
+      .sort(compareConversations);
   }
 
   async upsertProfile(userId: string, profile: Profile) {
@@ -138,6 +162,21 @@ class RedisStore implements Store {
   async markRead(userId: string) {
     await this.redis.hset(`user:${userId}`, { unread: 0 });
   }
+
+  async setFlags(userId: string, flags: ConversationFlags) {
+    const conv = await this.getConversation(userId);
+    if (!conv) return null;
+    const next = applyFlags(conv, flags);
+    await this.redis.hset(`user:${userId}`, toHash(next));
+    return next;
+  }
+
+  async deleteConversation(userId: string) {
+    const pipe = this.redis.pipeline();
+    pipe.del(`user:${userId}`, `msgs:${userId}`);
+    pipe.zrem("convs", userId);
+    await pipe.exec();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +193,7 @@ class MemoryStore implements Store {
   }
 
   async listConversations(limit = 100) {
-    return [...this.convs.values()].sort((a, b) => b.lastAt - a.lastAt).slice(0, limit);
+    return [...this.convs.values()].sort(compareConversations).slice(0, limit);
   }
 
   async upsertProfile(userId: string, profile: Profile) {
@@ -180,6 +219,19 @@ class MemoryStore implements Store {
   async markRead(userId: string) {
     const conv = this.convs.get(userId);
     if (conv) this.convs.set(userId, { ...conv, unread: 0 });
+  }
+
+  async setFlags(userId: string, flags: ConversationFlags) {
+    const conv = this.convs.get(userId);
+    if (!conv) return null;
+    const next = applyFlags(conv, flags);
+    this.convs.set(userId, next);
+    return next;
+  }
+
+  async deleteConversation(userId: string) {
+    this.convs.delete(userId);
+    this.msgs.delete(userId);
   }
 }
 

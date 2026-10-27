@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Globe } from "lucide-react";
+import { ArrowLeft, BellOff, Globe, MoreHorizontal, Pin } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { Composer } from "./Composer";
 import { useLang } from "./LangProvider";
@@ -24,12 +24,23 @@ interface Props {
   onSend: (text: string) => void;
   onRetry: (id: string) => void;
   onDiscard: (id: string) => void;
+  onMenu: (position: { top: number; left: number }) => void;
 }
 
-export function Thread({ conversation: c, messages, now, composerRef, onBack, onSend, onRetry, onDiscard }: Props) {
+export function Thread({
+  conversation: c,
+  messages,
+  now,
+  composerRef,
+  onBack,
+  onSend,
+  onRetry,
+  onDiscard,
+  onMenu,
+}: Props) {
   const { t } = useLang();
   const wait = c.waitingSince ? now - c.waitingSince : 0;
-  const level = waitLevel(wait);
+  const level = c.muted ? "calm" : waitLevel(wait);
   const web = channelOf(c.userId) === "web";
 
   return (
@@ -46,7 +57,11 @@ export function Thread({ conversation: c, messages, now, composerRef, onBack, on
         </button>
         <Avatar userId={c.userId} name={c.displayName} src={c.pictureUrl} size={40} />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg leading-tight font-semibold tracking-[-0.01em] text-ink">{c.displayName}</h2>
+          <h2 className="flex items-center gap-2 text-lg leading-tight font-semibold tracking-[-0.01em] text-ink">
+            <span className="truncate">{c.displayName}</span>
+            {c.pinned && <Pin className="size-3.5 shrink-0 text-ink-3" aria-label={t("pinned")} />}
+            {c.muted && <BellOff className="size-3.5 shrink-0 text-ink-3" aria-label={t("muted")} />}
+          </h2>
           <p className="mt-0.5 flex items-center gap-1.5 font-mono text-xs text-ink-3" title={c.userId}>
             {web ? (
               <>
@@ -68,6 +83,18 @@ export function Thread({ conversation: c, messages, now, composerRef, onBack, on
         >
           {c.waitingSince ? t("waitingFor", { t: formatWait(wait) }) : t("replied")}
         </span>
+        <button
+          type="button"
+          aria-label={t("moreActions", { name: c.displayName })}
+          aria-haspopup="menu"
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            onMenu({ top: r.bottom + 4, left: r.right - 208 });
+          }}
+          className="-mr-1 flex size-9 shrink-0 items-center justify-center rounded-md text-ink-2 hover:bg-raised hover:text-ink"
+        >
+          <MoreHorizontal className="size-5" aria-hidden />
+        </button>
       </header>
 
       <MessageList

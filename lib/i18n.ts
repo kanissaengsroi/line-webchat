@@ -88,6 +88,19 @@ const th = {
   guestNote: "แชทนี้อยู่บนเว็บเท่านั้น เข้าสู่ระบบด้วย LINE หากต้องการรับคำตอบในแอป LINE",
   addFriend: "เพิ่มเพื่อน",
   chatWith: "{name}",
+  pin: "ปักหมุดแชท",
+  unpin: "เลิกปักหมุด",
+  mute: "ปิดการแจ้งเตือน",
+  unmute: "เปิดการแจ้งเตือน",
+  pinned: "ปักหมุดแล้ว",
+  muted: "ปิดการแจ้งเตือนแล้ว",
+  moreActions: "ตัวเลือกสำหรับแชทกับ {name}",
+  deleteChat: "ลบแชท",
+  deleteTitle: "ลบแชทกับ {name}?",
+  deleteBodyLine: "ประวัติข้อความทั้งหมดในเว็บแชทจะถูกลบและกู้คืนไม่ได้ ข้อความในแอป LINE ของผู้ใช้ยังอยู่ ถ้าผู้ใช้ส่งข้อความมาใหม่ แชทจะกลับมาในรายการ",
+  deleteBodyWeb: "ประวัติข้อความทั้งหมดจะถูกลบและกู้คืนไม่ได้ ผู้ใช้เว็บจะเห็นแชทว่างเปล่า",
+  deleteFailed: "ลบไม่สำเร็จ ลองอีกครั้ง",
+  cancel: "ยกเลิก",
 };
 
 type Dict = typeof th;
@@ -177,6 +190,19 @@ const en: Dict = {
   guestNote: "This chat lives on the website only. Log in with LINE to get replies in the LINE app.",
   addFriend: "Add friend",
   chatWith: "{name}",
+  pin: "Pin chat",
+  unpin: "Unpin",
+  mute: "Mute",
+  unmute: "Unmute",
+  pinned: "Pinned",
+  muted: "Muted",
+  moreActions: "Options for chat with {name}",
+  deleteChat: "Delete chat",
+  deleteTitle: "Delete chat with {name}?",
+  deleteBodyLine: "All message history in the webchat is deleted and can't be recovered. The messages stay in the user's LINE app; if they write again, the chat comes back.",
+  deleteBodyWeb: "All message history is deleted and can't be recovered. The web user will see an empty chat.",
+  deleteFailed: "Couldn't delete. Try again.",
+  cancel: "Cancel",
 };
 
 const dicts: Record<Lang, Dict> = { th, en };
